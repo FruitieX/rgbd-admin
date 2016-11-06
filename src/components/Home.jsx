@@ -1,9 +1,9 @@
 import React from 'react';
 import io from 'socket.io-client';
 
-const canvasStyle={
+const canvasStyle = {
   'background-color': 'black',
-  'width': '100%'
+  'width':            '100%',
 };
 
 export default class Home extends React.Component {
@@ -18,6 +18,7 @@ export default class Home extends React.Component {
     this.state.socket.on('strips', data => {
       const canvas = document.getElementById('strip');
       const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const colors = data[0].colors;
 
