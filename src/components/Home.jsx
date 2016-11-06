@@ -49,7 +49,11 @@ export default class Home extends React.Component {
         const w = canvas.width / strip.colors.length;
         const offset = index * canvas.width / strip.colors.length;
 
-        ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+        ctx.fillStyle = `rgb(
+          ${Math.round(color.r)},
+          ${Math.round(color.g)},
+          ${Math.round(color.b)}
+        )`;
         ctx.beginPath();
         ctx.arc(offset + w / 2, h / 2, w / 2, 0, 2 * Math.PI);
         ctx.fill();
@@ -66,7 +70,9 @@ export default class Home extends React.Component {
           <div>
             <b>RGB LED strip {index}, "{strip.name}"</b>
             <div>
-              Configuration: {strip.dev}, {strip.numLeds} LEDs, reversed: {strip.reversed ? 'true' : 'false'}
+              Configuration: {strip.dev},
+                             {strip.numLeds} LEDs,
+                             reversed: {strip.reversed ? 'true' : 'false'}
             </div>
           </div>
 
