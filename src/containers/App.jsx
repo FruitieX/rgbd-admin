@@ -1,7 +1,5 @@
 import React from 'react';
 
-import TopBar from '../components/TopBar';
-
 class App extends React.Component {
   onComponentDidMount() {
     console.log('there');
@@ -9,12 +7,11 @@ class App extends React.Component {
 
   render() {
     const containerStyle = {
-      padding: this.context.muiTheme.spacing.desktopGutter,
+      paddingBottom: this.context.muiTheme.spacing.desktopGutter,
     };
 
     return (
       <div>
-        <TopBar />
         <div style={containerStyle}>
           {React.cloneElement(this.props.children, this.props)}
         </div>

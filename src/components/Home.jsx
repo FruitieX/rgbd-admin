@@ -1,6 +1,7 @@
 import React from 'react';
 import io from 'socket.io-client';
 import Slider from 'material-ui/Slider';
+import Checkbox from 'material-ui/Checkbox';
 
 import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
@@ -21,14 +22,17 @@ export default class Home extends React.Component {
   constructor() {
     super();
 
-    const socketPath = `${window.location.protocol}//${window.location.hostname}:9009`;
+    const socketPath = `${window.location.protocol}//${window.location.hostname}`;
 
     this.state = {
-      socket:        io.connect(socketPath),
-      strips:        [],
-      patterns:      [],
-      activePattern: null,
+      socket:         io.connect(socketPath),
+      patterns:       [],
+      strips:         [],
+      activePattern:  null,
+      autoBrightness: false,
     };
+
+    this.strips = [];
   }
 
   componentDidMount() {
@@ -38,13 +42,17 @@ export default class Home extends React.Component {
         this.updateCanvas(strip, index);
       });
 
-      this.setState({ strips });
+      this.strips = strips;
+      this.setState({ strips: Object.keys(strips) });
     });
     this.state.socket.on('patterns', patterns => {
       this.setState({ patterns });
     });
     this.state.socket.on('activate', activePattern => {
       this.setState({ activePattern });
+    });
+    this.state.socket.on('autoBrightness', autoBrightness => {
+      this.setState({ autoBrightness });
     });
   }
 
@@ -64,6 +72,12 @@ export default class Home extends React.Component {
     this.state.socket.emit('activate', activePattern);
   }
 
+  autoBrightness(autoBrightness) {
+    console.log(autoBrightness);
+    this.setState({ autoBrightness });
+    this.state.socket.emit('autoBrightness', autoBrightness);
+  }
+
   updateCanvas() {
     const canvas = this.refs.strip0;
 
@@ -74,7 +88,7 @@ export default class Home extends React.Component {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    this.state.strips.forEach(strip => {
+    this.strips.forEach(strip => {
       strip.colors.forEach((color, index) => {
         const h = canvas.height;
         const w = canvas.width / strip.colors.length;
@@ -95,6 +109,11 @@ export default class Home extends React.Component {
   render() {
     const patterns = [];
 
+    const cardStyle = {
+      margin:       this.context.muiTheme.spacing.desktopGutter,
+      marginBottom: 0,
+    };
+
     this.state.patterns.forEach((pattern, index) => {
       patterns.push(
         <MenuItem primaryText={ pattern } key={ index } value={ pattern } />
@@ -103,9 +122,9 @@ export default class Home extends React.Component {
 
     const strips = [];
 
-    this.state.strips.forEach((strip, index) => {
+    this.strips.forEach((strip, index) => {
       strips.push(
-        <Card key={index}>
+        <Card style={cardStyle} key={index}>
           <CardHeader
             title={`RGB LED strip ${index}`}
             subtitle={`
@@ -117,36 +136,67 @@ export default class Home extends React.Component {
             `}
           />
 
-          <CardTitle subtitle='Preview:' />
-          <CardText>
-            <canvas style={ canvasStyle } width={1920} ref={`strip${index}`} />
-          </CardText>
-
-          <CardTitle subtitle='Brightness:' />
-          <CardText>
+          <CardTitle subtitle='Brightness:'>
             <Slider
               step={0.0001}
               value={strip.brightness}
+              min={0.1}
+              disabled={this.state.autoBrightness}
               onChange={(event, value) => this.changeBrightness(index, value)} />
-          </CardText>
+          </CardTitle>
+
+          <CardTitle subtitle='Preview:'>
+            <canvas style={ canvasStyle } width={1920} ref={`strip${index}`} />
+          </CardTitle>
         </Card>
       );
     });
 
     return (
       <div>
-        <SelectField
-          floatingLabelText='Active pattern'
-          value={this.state.activePattern}
-          onChange={(event, index, value) => {
-            this.changePattern(value);
-          }}
-        >
-          { patterns }
-        </SelectField>
+        <Card style={cardStyle}>
+          <CardHeader
+            title={'rgbd-admin'}
+            subtitle={'General settings'}
+          />
+          <CardTitle subtitle='Active pattern:'>
+            <SelectField
+              value={this.state.activePattern}
+              onChange={(event, index, value) => {
+                this.changePattern(value);
+              }} >
+              { patterns }
+            </SelectField>
+          </CardTitle>
+
+          <CardText>
+            <Checkbox
+              label='Automatic brightness'
+              switched={this.state.autoBrightness}
+              checked={this.state.autoBrightness}
+              style={styles.checkbox}
+              onCheck={(event, value) => {
+                this.autoBrightness(value);
+              }}
+            />
+          </CardText>
+        </Card>
 
         { strips }
       </div>
     );
   }
 }
+
+const styles = {
+  block: {
+    maxWidth: 250,
+  },
+  checkbox: {
+    marginBottom: 16,
+  },
+};
+
+Home.contextTypes = {
+  muiTheme: React.PropTypes.object.isRequired,
+};
