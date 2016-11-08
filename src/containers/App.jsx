@@ -8,10 +8,16 @@ class App extends React.Component {
   }
 
   render() {
+    const containerStyle = {
+      padding: this.context.muiTheme.spacing.desktopGutter,
+    };
+
     return (
       <div>
         <TopBar />
-        {React.cloneElement(this.props.children, this.props)}
+        <div style={containerStyle}>
+          {React.cloneElement(this.props.children, this.props)}
+        </div>
       </div>
     );
   }

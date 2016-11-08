@@ -1,5 +1,12 @@
 import React from 'react';
 import io from 'socket.io-client';
+import Slider from 'material-ui/Slider';
+import {
+  Card,
+  CardHeader,
+  CardText,
+  CardTitle,
+} from 'material-ui/Card';
 
 const canvasStyle = {
   'backgroundColor': 'black',
@@ -31,6 +38,13 @@ export default class Home extends React.Component {
 
   componentWillUnmount() {
     this.state.socket.disconnect();
+  }
+
+  changeBrightness(index, value) {
+    this.state.socket.emit('setBrightness', {
+      index,
+      value,
+    });
   }
 
   updateCanvas() {
@@ -66,22 +80,31 @@ export default class Home extends React.Component {
 
     this.state.strips.forEach((strip, index) => {
       strips.push(
-        <div key={index}>
-          <div>
-            <b>RGB LED strip {index}, "{strip.name}"</b>
-            <div>
-              Configuration: {strip.dev},
-                             {strip.numLeds} LEDs,
-                             reversed: {strip.reversed ? 'true' : 'false'}
-            </div>
-          </div>
+        <Card key={index}>
+          <CardHeader
+            title={`RGB LED strip ${index}`}
+            subtitle={`
+              name: ${strip.name},
+              device: ${strip.dev},
+              numLeds: ${strip.numLeds},
+              reversed: ${strip.reversed ? 'true' : 'false'},
+              fps: ${Math.round(strip.fps)}
+            `}
+          />
 
-          <canvas style={ canvasStyle } width={1920} ref={`strip${index}`} />
+          <CardTitle subtitle='Preview:' />
+          <CardText>
+            <canvas style={ canvasStyle } width={1920} ref={`strip${index}`} />
+          </CardText>
 
-          <div>
-            Avg framerate: {Math.round(strip.fps)}
-          </div>
-        </div>
+          <CardTitle subtitle='Brightness:' />
+          <CardText>
+            <Slider
+              step={0.0001}
+              value={strip.brightness}
+              onChange={(event, value) => this.changeBrightness(index, value)} />
+          </CardText>
+        </Card>
       );
     });
 
