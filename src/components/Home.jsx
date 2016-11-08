@@ -1,6 +1,10 @@
 import React from 'react';
 import io from 'socket.io-client';
 import Slider from 'material-ui/Slider';
+
+import SelectField from 'material-ui/SelectField';
+import MenuItem from 'material-ui/MenuItem';
+
 import {
   Card,
   CardHeader,
@@ -17,9 +21,13 @@ export default class Home extends React.Component {
   constructor() {
     super();
 
+    const socketPath = `${window.location.protocol}//${window.location.hostname}:9009`;
+
     this.state = {
-      socket: io.connect('http://192.168.1.101:9009'),
-      strips: [],
+      socket:        io.connect(socketPath),
+      strips:        [],
+      patterns:      [],
+      activePattern: null,
     };
   }
 
@@ -30,9 +38,13 @@ export default class Home extends React.Component {
         this.updateCanvas(strip, index);
       });
 
-      this.setState({
-        strips,
-      });
+      this.setState({ strips });
+    });
+    this.state.socket.on('patterns', patterns => {
+      this.setState({ patterns });
+    });
+    this.state.socket.on('activate', activePattern => {
+      this.setState({ activePattern });
     });
   }
 
@@ -45,6 +57,11 @@ export default class Home extends React.Component {
       index,
       value,
     });
+  }
+
+  changePattern(activePattern) {
+    this.setState({ activePattern });
+    this.state.socket.emit('activate', activePattern);
   }
 
   updateCanvas() {
@@ -76,6 +93,14 @@ export default class Home extends React.Component {
   }
 
   render() {
+    const patterns = [];
+
+    this.state.patterns.forEach((pattern, index) => {
+      patterns.push(
+        <MenuItem primaryText={ pattern } key={ index } value={ pattern } />
+      );
+    });
+
     const strips = [];
 
     this.state.strips.forEach((strip, index) => {
@@ -110,6 +135,16 @@ export default class Home extends React.Component {
 
     return (
       <div>
+        <SelectField
+          floatingLabelText='Active pattern'
+          value={this.state.activePattern}
+          onChange={(event, index, value) => {
+            this.changePattern(value);
+          }}
+        >
+          { patterns }
+        </SelectField>
+
         { strips }
       </div>
     );
