@@ -1,7 +1,7 @@
 import React from 'react';
-import io from 'socket.io-client';
 import Slider from 'material-ui/Slider';
 import Checkbox from 'material-ui/Checkbox';
+import SockJS from 'sockjs-client';
 
 import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
@@ -22,42 +22,70 @@ export default class Home extends React.Component {
   constructor() {
     super();
 
-    const socketPath = `${window.location.protocol}//${window.location.hostname}`;
-
     this.state = {
-      socket:         io.connect(socketPath),
       patterns:       [],
       strips:         [],
       activePattern:  null,
       autoBrightness: false,
     };
 
+    this.socket = null;
     this.strips = [];
   }
 
-  componentDidMount() {
-    this.state.socket.emit('stripsSubscribe');
-    this.state.socket.on('strips', strips => {
-      strips.forEach((strip, index) => {
-        this.updateCanvas(strip, index);
-      });
+  send(method, params) {
+    this.socket.send(JSON.stringify({
+      jsonrpc: '2.0',
+      method,
+      params,
+    }));
+  }
 
-      this.strips = strips;
-      this.setState({ strips: Object.keys(strips) });
-    });
-    this.state.socket.on('patterns', patterns => {
-      this.setState({ patterns });
-    });
-    this.state.socket.on('activate', activePattern => {
-      this.setState({ activePattern });
-    });
-    this.state.socket.on('autoBrightness', autoBrightness => {
-      this.setState({ autoBrightness });
-    });
+  configureWS() {
+    console.log('Reconnecting WS');
+    const socketPath = `${window.location.protocol}//${window.location.hostname}/ws`;
+
+    this.socket = new SockJS(socketPath);
+    this.socket.onopen = () => {
+      this.send('stripsSubscribe');
+    };
+
+    this.socket.onclose = () => {
+      setTimeout(this.configureWS.bind(this), 1000);
+    };
+
+    this.socket.onmessage = e => {
+      const message = JSON.parse(e.data);
+
+      if (message.method === 'sync') {
+        this.setState(message.params);
+      } else if (message.method === 'strips') {
+        const strips = message.params;
+        strips.forEach((strip, index) => {
+          this.updateCanvas(strip, index);
+        });
+
+        this.strips = strips;
+        this.setState({ strips: Object.keys(strips) });
+      } else if (message.method === 'patterns') {
+        this.setState({ patterns: message.params });
+      } else if (message.method === 'activate') {
+        this.setState({ activePattern: message.params });
+      } else if (message.method === 'autoBrightness') {
+        // TODO: wrong
+        this.setState({ autoBrightness: message.params });
+      } else {
+        console.log('unknown message', message);
+      }
+    };
+  }
+
+  componentDidMount() {
+    this.configureWS();
   }
 
   componentWillUnmount() {
-    this.state.socket.disconnect();
+    this.state.socket.close();
   }
 
   changeBrightness(index, value) {
